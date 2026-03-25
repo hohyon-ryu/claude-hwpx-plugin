@@ -42,11 +42,11 @@ def make_section(title: str, body: str, paper: str = "A4", columns: int = 1) -> 
         secpr = re.sub(r'type="NONE"', 'type="NEWSPAPER"', secpr)
         secpr = re.sub(r'colCount="1"', f'colCount="{columns}"', secpr)
 
-    # 루트 태그 + 네임스페이스 추출
-    root_match = re.match(r'(<[^>]+>)', base)
+    # 루트 태그 + 네임스페이스 추출 (XML 선언 스킵)
+    root_match = re.search(r'(<hs:sec[^>]+>)', base)
     root_tag = root_match.group(1) if root_match else ''
-    close_match = re.search(r'(</[^>]+>)\s*$', base)
-    close_tag = close_match.group(1) if close_match else '</hs:sec>'
+    close_tag = '</hs:sec>'
+    xml_decl = '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
 
     # 본문 생성
     title_esc = html_mod.escape(title)
@@ -64,7 +64,7 @@ def make_section(title: str, body: str, paper: str = "A4", columns: int = 1) -> 
 
     body_xml = "".join(paras)
 
-    return (f'{root_tag}'
+    return (f'{xml_decl}{root_tag}'
             f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
             f'<hp:run charPrIDRef="0">{secpr}</hp:run></hp:p>'
             f'{body_xml}'
