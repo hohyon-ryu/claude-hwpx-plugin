@@ -2,82 +2,86 @@
 """
 HWPX 문서 생성기
 사용법: python generator.py output.hwpx "문서 제목" "본문 내용" [A4|B4] [1|2]
+
+실제 한글 프로그램에서 생성한 빈 문서를 기반으로 section만 교체하는 방식.
 """
 import zipfile
-import html
+import html as html_mod
+import re
 import sys
 from pathlib import Path
 
 TEMPLATES = Path(__file__).parent
 
 
-def read_template(name: str) -> str:
-    return (TEMPLATES / name).read_text(encoding="utf-8")
+def read_base(name: str) -> str:
+    return (TEMPLATES / f"base-{name}").read_text(encoding="utf-8")
 
 
-def read_template_bytes(name: str) -> bytes:
-    return (TEMPLATES / name).read_bytes()
+def read_base_bytes(name: str) -> bytes:
+    return (TEMPLATES / f"base-{name}").read_bytes()
 
 
 def make_section(title: str, body: str, paper: str = "A4", columns: int = 1) -> str:
+    """기존 section에서 secPr만 추출하고, 본문을 교체."""
+    base = read_base("section.xml")
+
+    # secPr 블록 추출
+    match = re.search(r'(<[^>]*:secPr[^>]*>.*?</[^>]*:secPr>)', base, re.DOTALL)
+    secpr = match.group(1) if match else ''
+
+    # 용지 크기 교체
     if paper == "B4":
-        page_pr = ('<hp:pagePr landscape="WIDELY" width="72851" height="103181" gutterType="LEFT_ONLY">'
-                   '<hp:margin header="4252" footer="4252" gutter="0" left="8504" right="8504" top="7086" bottom="5668"/>'
-                   '</hp:pagePr>')
-    else:
-        page_pr = ('<hp:pagePr landscape="WIDELY" width="59528" height="84188" gutterType="LEFT_ONLY">'
-                   '<hp:margin header="4252" footer="4252" gutter="0" left="8504" right="8504" top="5668" bottom="4252"/>'
-                   '</hp:pagePr>')
+        secpr = re.sub(r'width="59528"', 'width="72851"', secpr)
+        secpr = re.sub(r'height="84188"', 'height="103181"', secpr)
+        secpr = re.sub(r'top="5668"', 'top="7086"', secpr)
+        secpr = re.sub(r'bottom="4252"', 'bottom="5668"', secpr)
 
-    col_type = "NEWSPAPER" if columns > 1 else "NONE"
-    title_esc = html.escape(title)
-    body_esc = html.escape(body)
+    # 단수 교체
+    if columns > 1:
+        secpr = re.sub(r'type="NONE"', 'type="NEWSPAPER"', secpr)
+        secpr = re.sub(r'colCount="1"', f'colCount="{columns}"', secpr)
 
-    paragraphs = []
-    paragraphs.append(f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
-                      f'<hp:run charPrIDRef="0"><hp:t>{title_esc}</hp:t></hp:run></hp:p>')
-    paragraphs.append('<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
-                      '<hp:run charPrIDRef="0"><hp:t/></hp:run></hp:p>')
-    for line in body_esc.split("\\n"):
+    # 루트 태그 + 네임스페이스 추출
+    root_match = re.match(r'(<[^>]+>)', base)
+    root_tag = root_match.group(1) if root_match else ''
+    close_match = re.search(r'(</[^>]+>)\s*$', base)
+    close_tag = close_match.group(1) if close_match else '</hs:sec>'
+
+    # 본문 생성
+    title_esc = html_mod.escape(title)
+    paras = []
+    paras.append(f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
+                 f'<hp:run charPrIDRef="0"><hp:t>{title_esc}</hp:t></hp:run></hp:p>')
+    paras.append('<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
+                 '<hp:run charPrIDRef="0"><hp:t/></hp:run></hp:p>')
+    for line in body.split("\n"):
         line = line.strip()
         if line:
-            paragraphs.append(f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
-                              f'<hp:run charPrIDRef="0"><hp:t>{line}</hp:t></hp:run></hp:p>')
+            line_esc = html_mod.escape(line)
+            paras.append(f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
+                         f'<hp:run charPrIDRef="0"><hp:t>{line_esc}</hp:t></hp:run></hp:p>')
 
-    body_xml = "".join(paragraphs)
+    body_xml = "".join(paras)
 
-    return (f'<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-            f'<hs:sec xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" '
-            f'xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" '
-            f'xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" '
-            f'xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" '
-            f'xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" '
-            f'xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" '
-            f'xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar">'
+    return (f'{root_tag}'
             f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
-            f'<hp:run charPrIDRef="0">'
-            f'<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1134" tabStop="8000" tabStopVal="4000" tabStopUnit="HWPUNIT" outlineShapeIDRef="0" memoShapeIDRef="0" textVerticalWidthHead="0" masterPageCnt="0">'
-            f'<hp:grid lineGrid="0" charGrid="0" wonggojiFormat="0"/>'
-            f'<hp:colPr id="" type="{col_type}" layout="LEFT" colCount="{columns}" sameSz="1" sameGap="2268"/>'
-            f'<hp:startNum pageStartsOn="BOTH" page="0" pic="0" tbl="0" equation="0"/>'
-            f'{page_pr}'
-            f'</hp:secPr>'
-            f'</hp:run></hp:p>'
+            f'<hp:run charPrIDRef="0">{secpr}</hp:run></hp:p>'
             f'{body_xml}'
-            f'</hs:sec>')
+            f'{close_tag}')
 
 
 def generate_hwpx(output_path: str, title: str, body: str,
                   paper: str = "A4", columns: int = 1):
     with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("mimetype", "application/hwp+zip", compress_type=zipfile.ZIP_STORED)
-        zf.writestr("version.xml", read_template("version-real.xml"))
-        zf.writestr("settings.xml", read_template("settings-real.xml"))
-        zf.writestr("META-INF/container.xml", read_template("container-real.xml"))
-        zf.writestr("META-INF/container.rdf", read_template("container-real.rdf"))
-        zf.writestr("META-INF/manifest.xml", read_template("manifest-real.xml"))
-        zf.writestr("Contents/content.hpf", read_template("content-real.hpf"))
-        zf.writestr("Contents/header.xml", read_template("header-real.xml"))
+        zf.writestr("mimetype", read_base("mimetype"), compress_type=zipfile.ZIP_STORED)
+        zf.writestr("version.xml", read_base("version.xml"))
+        zf.writestr("settings.xml", read_base("settings.xml"))
+        zf.writestr("META-INF/container.xml", read_base("container.xml"))
+        zf.writestr("META-INF/container.rdf", read_base("container.rdf"))
+        zf.writestr("META-INF/manifest.xml", read_base("manifest.xml"))
+        zf.writestr("Contents/content.hpf", read_base("content.hpf"))
+        zf.writestr("Contents/header.xml", read_base("header.xml"))
         zf.writestr("Contents/section0.xml", make_section(title, body, paper, columns))
         zf.writestr("Preview/PrvText.txt", title)
 
