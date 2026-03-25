@@ -141,7 +141,7 @@ def build_equation_para(latex: str) -> str:
 # ---------------------------------------------------------------------------
 
 def build_table(rows: list[list[str]], col_widths: list[int] | None = None) -> str:
-    """2D 배열 → HWP 표 XML.
+    """2D 배열 → HWP 표 XML (실제 한글 HWPX 구조 기반).
     rows: [["셀1", "셀2"], ["셀3", "셀4"]]
     col_widths: 각 열 너비 (HWP 단위). None이면 균등 분배.
     """
@@ -150,53 +150,46 @@ def build_table(rows: list[list[str]], col_widths: list[int] | None = None) -> s
     if n_cols == 0:
         return ''
 
-    total_width = 42000  # A4 본문 영역 대략
+    total_width = 42000
     if col_widths is None:
         col_widths = [total_width // n_cols] * n_cols
 
-    row_height = 1200  # 기본 행 높이
+    row_height = 1800
 
-    # 열 정의
-    cols_xml = ''.join(f'<hp:tr><hp:tc colAddr="{c}" colSpan="1" rowSpan="1" width="{col_widths[c]}" '
-                       for c in range(n_cols))
-    # 전체 표 생성
-    cell_xmls = []
+    # 행/셀 생성 (실제 HWPX 구조: tc > subList > p, 그 다음 cellAddr/cellSpan/cellSz/cellMargin)
+    row_xmls = []
     for r, row in enumerate(rows):
+        cells = []
         for c in range(n_cols):
             cell_text = html_mod.escape(row[c]) if c < len(row) else ''
-            cell_xmls.append(
-                f'<hp:tc colAddr="{c}" rowAddr="{r}" colSpan="1" rowSpan="1" '
-                f'width="{col_widths[c % len(col_widths)]}" height="{row_height}" header="0" '
-                f'borderFillIDRef="1" '
-                f'editableAtFormMode="0">'
-                f'<hp:cellMargin left="170" right="170" top="57" bottom="57"/>'
+            w = col_widths[c % len(col_widths)]
+            cells.append(
+                f'<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="3">'
                 f'<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" '
                 f'vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" '
                 f'textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'
                 f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
                 f'<hp:run charPrIDRef="0"><hp:t>{cell_text}</hp:t></hp:run></hp:p>'
                 f'</hp:subList>'
+                f'<hp:cellAddr colAddr="{c}" rowAddr="{r}"/>'
+                f'<hp:cellSpan colSpan="1" rowSpan="1"/>'
+                f'<hp:cellSz width="{w}" height="{row_height}"/>'
+                f'<hp:cellMargin left="141" right="141" top="141" bottom="141"/>'
                 f'</hp:tc>'
             )
-
-    # 행으로 묶기
-    row_xmls = []
-    idx = 0
-    for r in range(n_rows):
-        cells = ''.join(cell_xmls[idx:idx + n_cols])
-        row_xmls.append(f'<hp:tr><hp:trPr height="{row_height}"/>{cells}</hp:tr>')
-        idx += n_cols
+        row_xmls.append(f'<hp:tr>{"".join(cells)}</hp:tr>')
 
     table_xml = (
         f'<hp:tbl id="0" zOrder="0" numberingType="TABLE" '
         f'textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" '
-        f'dropcapstyle="None" pageBreak="CELL" repeatHeader="1" rowCount="{n_rows}" colCount="{n_cols}" '
-        f'cellSpacing="0" borderFillIDRef="1">'
-        f'<hp:sz width="{total_width}" widthRelTo="ABSOLUTE" height="{row_height * n_rows}" heightRelTo="ABSOLUTE" protect="0"/>'
-        f'<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" '
-        f'vertRelTo="PAPER" horzRelTo="COLUMN" vertAlign="BOTTOM" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>'
+        f'dropcapstyle="None" pageBreak="CELL" repeatHeader="1" '
+        f'rowCnt="{n_rows}" colCnt="{n_cols}" cellSpacing="0" borderFillIDRef="3" noAdjust="0">'
+        f'<hp:sz width="{total_width}" widthRelTo="ABSOLUTE" '
+        f'height="{row_height * n_rows}" heightRelTo="ABSOLUTE" protect="0"/>'
+        f'<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="0" allowOverlap="0" holdAnchorAndSO="1" '
+        f'vertRelTo="PARA" horzRelTo="PARA" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>'
         f'<hp:outMargin left="0" right="0" top="0" bottom="0"/>'
-        f'<hp:inMargin left="170" right="170" top="57" bottom="57"/>'
+        f'<hp:inMargin left="0" right="0" top="0" bottom="0"/>'
         + ''.join(row_xmls)
         + '</hp:tbl>'
     )
