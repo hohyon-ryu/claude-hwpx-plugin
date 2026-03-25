@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "author": {
     "name": "Hohyon Ryu",
-    "url": "https://github.com/anthropos-labs"
+    "url": "https://github.com/hohyon-ryu"
   },
-  "repository": "https://github.com/anthropos-labs/claude-hwpx-plugin",
+  "repository": "https://github.com/hohyon-ryu/claude-hwpx-plugin",
   "license": "MIT",
   "keywords": ["hwpx", "hwp", "한글", "hancom", "korean", "document", "equation", "math", "government", "공문서"]
 }

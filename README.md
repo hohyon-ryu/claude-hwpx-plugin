@@ -15,7 +15,7 @@
 claude --plugin-dir ./claude-hwpx-plugin
 
 # 또는 GitHub에서 직접
-git clone https://github.com/anthropos-labs/claude-hwpx-plugin.git
+git clone https://github.com/hohyon-ryu/claude-hwpx-plugin.git
 claude --plugin-dir ./claude-hwpx-plugin
 ```
 
