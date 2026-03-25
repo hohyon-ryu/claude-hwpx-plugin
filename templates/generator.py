@@ -135,16 +135,21 @@ def make_section(title: str, body: str, paper: str = "A4", columns: int = 1) -> 
 def generate_hwpx(output_path: str, title: str, body: str,
                   paper: str = "A4", columns: int = 1):
     """HWPX 파일 생성"""
+    # content.hpf — 작동하는 한글 파일과 동일한 네임스페이스 포함
+    content_hpf = '''<?xml version="1.0" encoding="UTF-8" standalone="yes" ?><opf:package xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" xmlns:hhs="http://www.hancom.co.kr/hwpml/2011/history" xmlns:hm="http://www.hancom.co.kr/hwpml/2011/master-page" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf/" xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0" version="" unique-identifier="" id=""><opf:metadata><opf:title/><opf:language>ko</opf:language><opf:meta name="CreatedDate" content="text">2026-01-01T00:00:00Z</opf:meta></opf:metadata><opf:manifest><opf:item id="header" href="Contents/header.xml" media-type="application/xml"/><opf:item id="section0" href="Contents/section0.xml" media-type="application/xml"/><opf:item id="settings" href="settings.xml" media-type="application/xml"/></opf:manifest><opf:spine><opf:itemref idref="header" linear="yes"/><opf:itemref idref="section0" linear="yes"/></opf:spine></opf:package>'''
+
     with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
         # mimetype은 압축 없이
         zf.writestr("mimetype", read_template("mimetype"), compress_type=zipfile.ZIP_STORED)
         zf.writestr("version.xml", read_template("version.xml"))
         zf.writestr("settings.xml", read_template("settings.xml"))
         zf.writestr("META-INF/container.xml", read_template("container.xml"))
+        zf.writestr("META-INF/container.rdf", read_template("container.rdf"))
         zf.writestr("META-INF/manifest.xml", read_template("manifest.xml"))
-        zf.writestr("Contents/content.hpf", read_template("content.hpf"))
+        zf.writestr("Contents/content.hpf", content_hpf)
         zf.writestr("Contents/header.xml", HEADER_XML)
         zf.writestr("Contents/section0.xml", make_section(title, body, paper, columns))
+        zf.writestr("Preview/PrvText.txt", title)
 
     print(f"생성 완료: {output_path}")
 
