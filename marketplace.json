@@ -1,0 +1,10 @@
+{
+  "marketplaceVersion": "1.0",
+  "plugins": [
+    {
+      "name": "hwpx",
+      "source": { "source": "github", "repo": "hohyon-ryu/claude-hwpx-plugin" },
+      "version": "1.0.0"
+    }
+  ]
+}

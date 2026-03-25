@@ -18,6 +18,39 @@ This plugin teaches Claude Code the HWP/HWPX file structure, equation script syn
 
 ## 설치 | Installation
 
+### 방법 1: 마켓플레이스로 영구 설치 (권장)
+
+Claude Code에서 아래 명령어를 순서대로 실행하세요:
+
+```bash
+# 1. 마켓플레이스 추가
+/plugin marketplace add hohyon-ryu/claude-hwpx-plugin
+
+# 2. 플러그인 설치
+/plugin install hwpx
+```
+
+설치 후 `/hwpx:hwpx-read`, `/hwpx:hwpx-write`, `/hwpx:hwpx-convert` 명령어를 사용할 수 있습니다.
+
+### 방법 2: settings.json에 직접 추가
+
+`~/.claude/settings.json`에 아래 내용을 추가하면 모든 프로젝트에서 사용 가능합니다:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "hwpx": {
+      "source": { "source": "github", "repo": "hohyon-ryu/claude-hwpx-plugin" }
+    }
+  },
+  "enabledPlugins": {
+    "hwpx@hwpx": true
+  }
+}
+```
+
+### 방법 3: 로컬 테스트
+
 ```bash
 git clone https://github.com/hohyon-ryu/claude-hwpx-plugin.git
 claude --plugin-dir ./claude-hwpx-plugin
