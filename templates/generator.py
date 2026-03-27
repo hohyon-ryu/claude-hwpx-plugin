@@ -44,8 +44,35 @@ def _match_brace(s: str, start: int) -> str:
 
 
 def latex_to_hwp(latex: str) -> str:
-    """LaTeX → HWP equation script 변환. 중첩 중괄호 지원."""
-    s = latex.strip().strip("$")
+    """LaTeX → HWP equation script 변환 (매쓰온 rm/it 규칙 적용).
+
+    매쓰온 HWP 수식 규칙:
+    - 도형 꼭짓점/대문자(A,B,C,P,Q): rm (로마체)
+    - 단위(cm,m,kg,L): rm, 앞에 ` 간격
+    - 확률/통계 기호(P,C,H,B,N,E): rm
+    - 변수(a,b,x,y): it (이태릭, 기본값)
+    - 숫자: rm
+    - 쉼표 뒤: ~ (한 칸)
+    - 부등호 뒤 음수: it-2 (띄어쓰기 대신 it)
+    """
+    s = latex.strip()
+    s = re.sub(r'^\$+|\$+$', '', s)
+
+    # === 1단계: LaTeX 구조 → HWP 구조 ===
+
+    # \overline{AB} → rm bar{AB} (도형 선분은 rm)
+    s = re.sub(r'\\overline\s*\{([^}]*)\}', r'rm bar{\1}', s)
+    # \vec{AB} → vec{rm AB it} (벡터, 대문자 2+ → rm)
+    s = re.sub(r'\\vec\s*\{([A-Z]{2,})\}', r'vec{rm \1 it}', s)
+    s = re.sub(r'\\vec\s*\{([^}]*)\}', r'vec{\1}', s)
+
+    # \triangle ABC → rm triangle ABC
+    s = re.sub(r'\\triangle\s+([A-Z]+)', r'rm triangle \1', s)
+    s = re.sub(r'\\triangle', 'rm triangle ', s)
+
+    # \angle ABC → rm ANGLE ABC
+    s = re.sub(r'\\angle\s*([A-Z]+)', r'rm ANGLE \1', s)
+    s = re.sub(r'\\angle', 'ANGLE ', s)
 
     # 반복 적용 (중첩 처리)
     for _ in range(5):
@@ -53,7 +80,7 @@ def latex_to_hwp(latex: str) -> str:
         m = re.search(r'\\frac\s*\{', s)
         if m:
             num = _match_brace(s, m.end()-1)
-            rest_start = m.end() + len(num)  # } 다음
+            rest_start = m.end() + len(num)
             m2 = re.search(r'\{', s[rest_start:])
             if m2:
                 den = _match_brace(s, rest_start + m2.start())
@@ -87,25 +114,91 @@ def latex_to_hwp(latex: str) -> str:
 
         break
 
-    # 단순 치환
+    # 절댓값: \left| \right| → LEFT | RIGHT |
+    s = re.sub(r'\\left\s*\|', 'LEFT | ', s)
+    s = re.sub(r'\\right\s*\|', 'RIGHT | ', s)
     s = re.sub(r'\\left\s*\\\{', 'left lbrace ', s)
     s = re.sub(r'\\right\s*\\\}', 'right rbrace ', s)
     s = re.sub(r'\\left\s*', 'left ', s)
     s = re.sub(r'\\right\s*', 'right ', s)
     s = s.replace('\\{', 'lbrace ').replace('\\}', 'rbrace ')
-    s = re.sub(r'\\to(?![a-z])', 'rightarrow ', s)
+
+    # 명제: \to → `->`  (간격 포함)
+    s = re.sub(r'\\to(?![a-z])', '`->`', s)
+
+    # therefore, because 뒤에 ~ 간격
+    s = re.sub(r'\\therefore', 'therefore~', s)
+    s = re.sub(r'\\because', 'because~', s)
+
+    # \cdots → `cdots` (앞뒤 ` 간격)
+    s = re.sub(r'\\cdots', '`cdots`', s)
+    s = re.sub(r'\\ldots', '`cdots`', s)
+
+    # 내적: \cdot → cdot (bullet 아님)
+    s = re.sub(r'\\cdot', 'cdot ', s)
+
+    # 간격
     s = s.replace('\\quad', '~~').replace('\\qquad', '~~~~')
     s = re.sub(r'\\[,;:!]', '~', s)
+
+    # === 2단계: 확률/통계 기호 rm 처리 ===
+
+    # P(X=r), B(n,p), N(m,sigma^2), E(X) — 대문자 함수명을 rm으로
+    s = re.sub(r'([PCBHNE])\s*\(', r'{rm\1}{it(', s)
+
+    # 순열/조합: _{n} P_{r}, _{n} C_{r}, _{n} H_{r}
+    s = re.sub(r'_\{([^}]*)\}\s*P\s*_\{([^}]*)\}', r'_{\1}{rmP}_{\2}', s)
+    s = re.sub(r'_\{([^}]*)\}\s*C\s*_\{([^}]*)\}', r'_{\1}{rmC}_{\2}', s)
+    s = re.sub(r'_\{([^}]*)\}\s*H\s*_\{([^}]*)\}', r'_{\1}{rmH}_{\2}', s)
+
+    # === 3단계: 나머지 LaTeX 명령어 → HWP 키워드 ===
+
+    # 삼각함수/로그 앞뒤에 ` 간격
+    s = re.sub(r'\\(sin|cos|tan|log|ln|lim|max|min)\b', r'`\1`', s)
+
     # 나머지 \command → command
     s = re.sub(r'\\([a-zA-Z]+)', r'\1 ', s)
-    # 숫자 → rm{...}, 괄호/점/쉼표 → rm{...}
-    # +, -, = 등 연산자는 HWP가 자동으로 로마체 처리하므로 rm 불필요
+
+    # === 4단계: rm/it 적용 ===
+
+    s = re.sub(r'\s+', ' ', s).strip()
+
+    # 단위: cm, m, kg, L 등 (앞에 ` 간격)
+    s = re.sub(r'(?<!")\b(cm|mm|km|kg|mL|dL|m|g|L)\b(?!")', r'`rm\1', s)
+
+    # 숫자 → rm{...}
     s = re.sub(r'(\d+\.?\d*)', r' rm{\1} ', s)
+
+    # 괄호, 점, 쉼표 → rm{...} (연산자 +,-,= 는 그대로)
     s = re.sub(r'([().,])', r' rm{\1} ', s)
+
+    # 쉼표 뒤에 ~ 간격 추가
+    s = s.replace('rm{,}', 'rm{,}~')
+
     # 연속 rm 합치기: rm{1} rm{.} rm{5} → rm{1.5}
     for _ in range(5):
         s = re.sub(r'rm\{([^}]*)\}\s*rm\{([^}]*)\}', r'rm{\1\2}', s)
-    return re.sub(r'\s+', ' ', s).strip()
+
+    # 과도한 공백 정리
+    s = re.sub(r'\s+', ' ', s).strip()
+
+    # === 5단계: 공백 → ~ (HWP 수식에서 일반 공백은 무시됨) ===
+    structural_kw = re.compile(
+        r'\b(over|sqrt|left|right|LEFT|RIGHT|lbrace|rbrace|rm|it|bar|vec|cases)\b'
+    )
+    tokens = s.split(' ')
+    result = []
+    for i, tok in enumerate(tokens):
+        result.append(tok)
+        if i < len(tokens) - 1:
+            curr = tok
+            nxt = tokens[i + 1]
+            # 구조 키워드 앞뒤는 일반 공백 유지 (HWP 구문 파서용)
+            if structural_kw.search(curr) or structural_kw.search(nxt):
+                result.append(' ')
+            else:
+                result.append('~')
+    return ''.join(result)
 
 
 def build_equation(script: str, width: int = 14000) -> str:

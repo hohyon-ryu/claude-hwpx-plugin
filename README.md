@@ -154,18 +154,61 @@ LaTeX                    HWP Equation Script
 \sqrt{x}             →  sqrt {x}
 \text{cm}            →  "cm"
 \left( \right)       →  left ( right )
+\left| \right|       →  LEFT | RIGHT |
+\overline{AB}        →  rm bar{AB}
+\triangle ABC        →  rm triangle ABC
+\angle ABC           →  rm ANGLE ABC
+\cdot                →  cdot (NOT bullet)
+\cdots               →  `cdots` (backtick spacing)
+\to                  →  `->` (backtick spacing)
 \alpha, \theta       →  alpha, theta
+```
+
+### rm/it 규칙 | Roman/Italic Rules (MathON Standard)
+
+HWP 수식에서 알파벳은 기본 이태릭체(it). 로마체가 필요한 경우 `rm` 사용.
+
+In HWP equations, letters default to italic. Use `rm` for roman (upright):
+
+| 대상 / Target | 예시 / Example | HWP Script |
+|---------------|----------------|------------|
+| 도형 꼭짓점 / Geometry vertices | A, B, ABC | `rmA`, `rmABC` |
+| 단위 / Units | cm, kg, L | `` `rmcm ``, `` `rmkg `` |
+| 확률/통계 / Probability | P, C, N, E | `{rmP}`, `{rmC}` |
+| 선분 / Segments | AB | `rm bar{AB}` |
+| 변수 / Variables (default) | a, x, y | `a`, `x`, `y` |
+
+### 간격 규칙 | Spacing Rules
+
+| 위치 / Position | 기호 / Symbol | 예시 / Example |
+|-----------------|---------------|----------------|
+| 단위 앞 / Before unit | `` ` `` | ``150`rmkg`` |
+| 쉼표 뒤 / After comma | `~` | `(a,~b)` |
+| cdots 앞뒤 | `` ` `` | `` `cdots` `` |
+| therefore/because 뒤 | `~` | `therefore~a=b` |
+
+### 확률/통계 혼합 패턴 | Probability/Statistics Patterns
+
+```
+순열 nPr       →  _{n}{rmP}_{r}
+조합 nCr       →  _{n}{rmC}_{r}
+P(X=r)         →  {rmP}{it(X=r)}
+B(n,p)         →  {rmB}{it(n,~p)}
+N(m,σ²)        →  {rmN}{it(m,~sigma^2)}
+E(X)           →  {rmE}{it(X)}
 ```
 
 ## HWP 포맷 버전 | Format Versions
 
 | 버전 | 시기 | 포맷 |
 |------|------|------|
-| HWP 1.x–3.x | 1989–2001 | 독자 바이너리 (거의 멸종) |
-| **HWP 5.x** | 2002–현재 | **OLE2 compound document** |
-| **HWPX** | 2014–현재 | **ZIP+XML** (Open XML 계열) |
+| HWP 1.x-3.x | 1989-2001 | 독자 바이너리 (거의 멸종) |
+| **HWP 5.x** | 2002-현재 | **OLE2 compound document** |
+| **HWPX** | 2014-현재 | **ZIP+XML** (Open XML 계열) |
 
 현재 유통되는 .hwp 파일의 99%는 HWP5입니다.
+
+이 플러그인의 템플릿은 **한글 2020** (appVersion 11.0.0.7571) 기준으로 생성됩니다.
 
 ## 활용 사례 | Use Cases
 
