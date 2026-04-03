@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-TEMPLATES = Path(__file__).parent
+TEMPLATES = Path(__file__).parent.parent / "templates"
 
 
 def read_base(name: str) -> str:
@@ -295,21 +295,51 @@ def build_table(rows: list[list[str]], col_widths: list[int] | None = None) -> s
 # 단락 (Paragraph)
 # ---------------------------------------------------------------------------
 
-def build_text_para(text: str) -> str:
-    """텍스트 paragraph. $...$는 인라인 수식으로 변환."""
-    parts = re.split(r'(\$[^$]+\$)', text)
+# charPrIDRef 매핑 (header.xml에 정의된 스타일)
+STYLE_BODY = "0"       # 10pt 바탕, 기본 본문
+STYLE_H1 = "7"         # 22pt bold black
+STYLE_H2 = "8"         # 16pt bold black
+STYLE_H3 = "9"         # 13pt bold black
+STYLE_BOLD = "10"      # 10pt bold black
+STYLE_H1_BLUE = "11"   # 22pt bold dark blue
+STYLE_SMALL = "12"     # 8pt gray
+
+
+def _build_runs(text: str, char_pr: str = STYLE_BODY) -> str:
+    """텍스트를 runs로 변환. $...$는 수식, **...**는 볼드 처리."""
+    # 수식과 볼드를 토큰으로 분리
+    parts = re.split(r'(\$[^$]+\$|\*\*[^*]+\*\*)', text)
     runs = []
     for part in parts:
+        if not part:
+            continue
         if part.startswith('$') and part.endswith('$'):
             script = latex_to_hwp(part[1:-1])
             width = max(len(script) * 600, 3000)
             eq = build_equation(script, min(width, 18000))
-            runs.append(f'<hp:run charPrIDRef="0">{eq}<hp:t/></hp:run>')
-        elif part:
-            runs.append(f'<hp:run charPrIDRef="0"><hp:t>{html_mod.escape(part)}</hp:t></hp:run>')
+            runs.append(f'<hp:run charPrIDRef="{char_pr}">{eq}<hp:t/></hp:run>')
+        elif part.startswith('**') and part.endswith('**'):
+            bold_text = part[2:-2]
+            runs.append(f'<hp:run charPrIDRef="{STYLE_BOLD}"><hp:t>{html_mod.escape(bold_text)}</hp:t></hp:run>')
+        else:
+            runs.append(f'<hp:run charPrIDRef="{char_pr}"><hp:t>{html_mod.escape(part)}</hp:t></hp:run>')
+    return ''.join(runs)
 
+
+def build_text_para(text: str, char_pr: str = STYLE_BODY) -> str:
+    """텍스트 paragraph. $...$는 인라인 수식, **...**는 볼드로 변환."""
+    runs = _build_runs(text, char_pr)
     return (f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
-            + ''.join(runs) + '</hp:p>')
+            + runs + '</hp:p>')
+
+
+def build_heading_para(text: str, level: int = 1) -> str:
+    """Markdown heading을 HWP 단락으로 변환. level: 1=H1, 2=H2, 3=H3."""
+    style_map = {1: STYLE_H1, 2: STYLE_H2, 3: STYLE_H3}
+    char_pr = style_map.get(level, STYLE_H3)
+    runs = _build_runs(text, char_pr)
+    return (f'<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
+            + runs + '</hp:p>')
 
 
 def build_empty_para() -> str:
@@ -345,11 +375,19 @@ def make_section(title: str, body: str, paper: str = "A4", columns: int = 1) -> 
     xml_decl = '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
 
     paras = []
-    paras.append(build_text_para(title))
+    paras.append(build_heading_para(title, level=1))
     paras.append(build_empty_para())
     for line in body.split("\n"):
         line = line.strip()
-        if line:
+        if not line:
+            continue
+        # Markdown heading 파싱
+        heading_match = re.match(r'^(#{1,3})\s+(.+)$', line)
+        if heading_match:
+            level = len(heading_match.group(1))
+            paras.append(build_empty_para())
+            paras.append(build_heading_para(heading_match.group(2), level))
+        else:
             paras.append(build_text_para(line))
 
     return f'{xml_decl}{root_tag}{first_p}{"".join(paras)}</hs:sec>'

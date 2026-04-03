@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "hohyon-ryu-claude-hwpx-plugin",
+  "description": "HWP/HWPX (한글) document plugin — read, write, convert Korean documents with equation scripts, tables, and multi-column layouts",
+  "owner": {
+    "name": "Hohyon Ryu",
+    "email": "hohyon@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "hwpx",
+      "description": "Read, write, and convert HWP/HWPX (한글) documents — Markdown conversion, equation scripts, XML structure patterns",
+      "category": "development",
+      "source": ".",
+      "homepage": "https://github.com/hohyon-ryu/claude-hwpx-plugin"
+    }
+  ]
+}

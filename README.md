@@ -12,29 +12,21 @@ Virtually all official documents in South Korea are stored in HWP format (Hancom
 
 This plugin teaches Claude Code the HWP/HWPX file structure, equation script syntax, and XML schema so it can work with Korean documents natively.
 
-한국의 공공기관, 학교, 기업에서 생산되는 문서의 상당수가 HWP(한글) 형식입니다. 이 문서들을 데이터로 활용하려면 텍스트 추출, 수식 변환, 포맷 변환이 필요하지만, 기존 도구들은 수식 처리가 불완전하고 자동화가 어렵습니다.
+## Installation | 설치
 
-이 플러그인을 설치하면 Claude Code가 HWP/HWPX 파일 구조, HWP 수식 문법, XML 스키마를 이해하게 되어 한글 문서 관련 작업을 즉시 수행할 수 있습니다.
-
-## 설치 | Installation
-
-### 방법 1: 마켓플레이스로 영구 설치 (권장)
-
-Claude Code에서 아래 명령어를 순서대로 실행하세요:
+### Option 1: Marketplace (Recommended)
 
 ```bash
-# 1. 마켓플레이스 추가
+# Add marketplace
 /plugin marketplace add hohyon-ryu/claude-hwpx-plugin
 
-# 2. 플러그인 설치
+# Install plugin
 /plugin install hwpx
 ```
 
-설치 후 `/hwpx:hwpx-read`, `/hwpx:hwpx-write`, `/hwpx:hwpx-convert` 명령어를 사용할 수 있습니다.
+### Option 2: settings.json
 
-### 방법 2: settings.json에 직접 추가
-
-`~/.claude/settings.json`에 아래 내용을 추가하면 모든 프로젝트에서 사용 가능합니다:
+Add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -49,103 +41,56 @@ Claude Code에서 아래 명령어를 순서대로 실행하세요:
 }
 ```
 
-### 방법 3: 로컬 테스트
+### Option 3: Local Testing
 
 ```bash
 git clone https://github.com/hohyon-ryu/claude-hwpx-plugin.git
 claude --plugin-dir ./claude-hwpx-plugin
 ```
 
-## 스킬 | Skills
+## Quick Reference
 
-### `/hwpx:hwpx-read` — 문서 읽기 | Read Documents
+| Task | Command |
+|------|---------|
+| Read HWPX → Markdown | `python scripts/reader.py doc.hwpx output.md` |
+| Create HWPX | `python scripts/generator.py out.hwpx "Title" "Body"` |
+| Validate HWPX | `python scripts/validate.py doc.hwpx` |
+| Read legacy HWP | `pip install pyhwp && hwp5txt doc.hwp` |
+| Use skill | Mention HWP/HWPX/한글 in conversation — skill auto-activates |
 
-HWP/HWPX 파일에서 텍스트, 수식, 이미지, 표를 추출합니다.
+## Skill: `/hwpx:hwpx`
 
-Extract text, equations, images, and tables from HWP/HWPX files.
+A single unified skill that handles all HWP/HWPX operations:
 
-```
-/hwpx:hwpx-read 공문서.hwpx
-/hwpx:hwpx-read contract.hwp
-```
+- **Read**: Extract text, equations (→ LaTeX), images, tables from HWPX files
+- **Write**: Generate HWPX with equations, tables, images, multi-column layouts
+- **Convert**: Bidirectional HWPX ↔ Markdown conversion
+- **Edit**: Unpack → edit XML → repack workflow
 
-- **HWPX**: ZIP 해제 → XML 파싱 → 텍스트/수식 추출
-- **HWP5 (바이너리)**: `pyhwp` 활용 (`pip install pyhwp`)
-- **수식**: HWP equation script → LaTeX 자동 변환
+The skill auto-activates when you mention HWP, HWPX, 한글, or Hancom documents.
 
-### `/hwpx:hwpx-write` — 문서 생성 | Generate Documents
+## Scripts
 
-HWPX 파일을 프로그래밍으로 생성합니다.
+| File | Purpose |
+|------|---------|
+| `scripts/reader.py` | HWPX/HWP5 → Markdown converter |
+| `scripts/generator.py` | Markdown/text → HWPX generator |
+| `scripts/validate.py` | HWPX structure validator |
 
-Programmatically create HWPX files.
+## Templates
 
-```
-/hwpx:hwpx-write B4 2단 시험지 만들어줘
-/hwpx:hwpx-write A4 report template
-```
+| File | Purpose |
+|------|---------|
+| `templates/base-header.xml` | Font definitions, styles, character properties |
+| `templates/base-section.xml` | Section template with page/column settings |
+| `templates/base-content.hpf` | OPF package manifest |
+| `templates/base-container.xml` | OPF container |
+| `templates/sample-a4.hwpx` | A4 single-column sample |
+| `templates/sample-b4-2col.hwpx` | B4 2-column exam paper sample |
 
-- B4/A4 용지, 1단/2단 레이아웃
-- LaTeX → HWP equation script 수식 변환
-- 이미지 삽입, 미주(해설), 표
-- 한글 폰트 설정 (신명중명조, 나눔고딕 등)
+## HWP Equation Syntax
 
-### `/hwpx:hwpx-convert` — 포맷 변환 | Format Conversion
-
-HWP/HWPX ↔ Markdown 양방향 변환.
-
-Bidirectional HWP/HWPX ↔ Markdown conversion.
-
-```
-/hwpx:hwpx-convert report.hwpx → markdown
-/hwpx:hwpx-convert *.hwp → markdown (배치)
-/hwpx:hwpx-convert document.md → hwpx
-```
-
-## 포함된 도구 | Included Tools
-
-`templates/` 디렉토리에 즉시 실행 가능한 스크립트가 포함되어 있습니다.
-
-| 파일 | 설명 | Description |
-|------|------|-------------|
-| `reader.py` | HWPX/HWP5 → Markdown 변환기 | HWPX/HWP5 → Markdown converter |
-| `generator.py` | Markdown → HWPX 생성기 | Markdown → HWPX generator |
-| `*.xml` | HWPX 뼈대 템플릿 | HWPX skeleton templates |
-
-```bash
-# HWPX → Markdown
-python templates/reader.py input.hwpx output.md
-
-# HWPX 생성
-python templates/generator.py output.hwpx "제목" "본문"
-```
-
-## HWP → Markdown 변환 가이드 | Conversion Guide
-
-가장 흔한 사용 사례입니다. 방법별 품질 비교:
-
-| 방법 | 텍스트 | 수식 | 표 | 이미지 |
-|------|--------|------|-----|--------|
-| `hwp5txt` (pyhwp) | ✅ | ❌ | △ | ❌ |
-| `hwp5html` → pandoc | ✅ | △ | ✅ | ✅ |
-| HWPX → `reader.py` | ✅ | ✅ LaTeX | ✅ | ✅ |
-
-수식이 중요한 경우: HWP → 한글에서 HWPX로 저장 → `reader.py`가 최고 품질.
-
-For math-heavy docs: Save as HWPX in Hangul → use `reader.py` for best quality.
-
-## HWP → HWPX 변환 | HWP to HWPX
-
-직접 변환 CLI 도구는 존재하지 않습니다. No direct CLI conversion tool exists.
-
-- **소량**: 한글 프로그램에서 "다른 이름으로 저장" → HWPX
-- **대량 (Windows)**: 한글 ActiveX 매크로 자동화
-- **Mac/Linux**: `pyhwp`로 텍스트 추출 → HWPX 재생성 (서식 손실)
-
-## HWP 수식 문법 | HWP Equation Syntax
-
-HWP는 LaTeX가 아닌 자체 수식 문법을 사용합니다.
-
-HWP uses its own equation syntax, not LaTeX:
+HWP uses its own equation syntax, **not LaTeX**:
 
 ```
 LaTeX                    HWP Equation Script
@@ -153,82 +98,42 @@ LaTeX                    HWP Equation Script
 \frac{a}{b}          →  {a} over {b}
 \sqrt{x}             →  sqrt {x}
 \text{cm}            →  "cm"
-\left( \right)       →  left ( right )
-\left| \right|       →  LEFT | RIGHT |
 \overline{AB}        →  rm bar{AB}
 \triangle ABC        →  rm triangle ABC
-\angle ABC           →  rm ANGLE ABC
 \cdot                →  cdot (NOT bullet)
-\cdots               →  `cdots` (backtick spacing)
 \to                  →  `->` (backtick spacing)
-\alpha, \theta       →  alpha, theta
 ```
 
-### rm/it 규칙 | Roman/Italic Rules (MathON Standard)
+See the full conversion table in [SKILL.md](skills/hwpx/SKILL.md).
 
-HWP 수식에서 알파벳은 기본 이태릭체(it). 로마체가 필요한 경우 `rm` 사용.
+## Conversion Quality
 
-In HWP equations, letters default to italic. Use `rm` for roman (upright):
+| Method | Text | Equations | Tables | Images |
+|--------|------|-----------|--------|--------|
+| hwp5txt (pyhwp) | ✅ | ❌ | △ | ❌ |
+| hwp5html → pandoc | ✅ | △ | ✅ | ✅ |
+| **HWPX → reader.py** | ✅ | **✅ LaTeX** | ✅ | ✅ |
 
-| 대상 / Target | 예시 / Example | HWP Script |
-|---------------|----------------|------------|
-| 도형 꼭짓점 / Geometry vertices | A, B, ABC | `rmA`, `rmABC` |
-| 단위 / Units | cm, kg, L | `` `rmcm ``, `` `rmkg `` |
-| 확률/통계 / Probability | P, C, N, E | `{rmP}`, `{rmC}` |
-| 선분 / Segments | AB | `rm bar{AB}` |
-| 변수 / Variables (default) | a, x, y | `a`, `x`, `y` |
+**Best quality**: HWP → Save as HWPX in 한글 → `reader.py`
 
-### 간격 규칙 | Spacing Rules
+## Use Cases
 
-| 위치 / Position | 기호 / Symbol | 예시 / Example |
-|-----------------|---------------|----------------|
-| 단위 앞 / Before unit | `` ` `` | ``150`rmkg`` |
-| 쉼표 뒤 / After comma | `~` | `(a,~b)` |
-| cdots 앞뒤 | `` ` `` | `` `cdots` `` |
-| therefore/because 뒤 | `~` | `therefore~a=b` |
+- **Government**: Convert HWP official documents to Markdown/data
+- **Education**: Auto-generate exam papers in HWPX (B4 2-column)
+- **Legal**: Digitize and structure legal documents
+- **Archive**: Batch-convert HWP documents to Markdown
 
-### 확률/통계 혼합 패턴 | Probability/Statistics Patterns
-
-```
-순열 nPr       →  _{n}{rmP}_{r}
-조합 nCr       →  _{n}{rmC}_{r}
-P(X=r)         →  {rmP}{it(X=r)}
-B(n,p)         →  {rmB}{it(n,~p)}
-N(m,σ²)        →  {rmN}{it(m,~sigma^2)}
-E(X)           →  {rmE}{it(X)}
-```
-
-## HWP 포맷 버전 | Format Versions
-
-| 버전 | 시기 | 포맷 |
-|------|------|------|
-| HWP 1.x-3.x | 1989-2001 | 독자 바이너리 (거의 멸종) |
-| **HWP 5.x** | 2002-현재 | **OLE2 compound document** |
-| **HWPX** | 2014-현재 | **ZIP+XML** (Open XML 계열) |
-
-현재 유통되는 .hwp 파일의 99%는 HWP5입니다.
-
-이 플러그인의 템플릿은 **한글 2020** (appVersion 11.0.0.7571) 기준으로 생성됩니다.
-
-## 활용 사례 | Use Cases
-
-- **공공기관 | Government**: HWP 공문서를 Markdown/데이터로 변환하여 검색·분석
-- **교육 | Education**: 시험지·교안을 HWPX로 자동 생성
-- **법률 | Legal**: 법률 문서 데이터화 및 구조화
-- **아카이브 | Archive**: 대량 HWP 문서 일괄 Markdown 변환
-
-## 시스템 요구사항 | Requirements
+## Requirements
 
 - Claude Code
-- Python 3.8+ (templates 스크립트 실행 시)
-- `pyhwp` (HWP5 읽기 시): `pip install pyhwp`
-- `pandoc` (HTML→Markdown 변환 시, 선택)
+- Python 3.8+ (for scripts)
+- `pyhwp` (optional, for HWP5 binary): `pip install pyhwp`
+- `pandoc` (optional, for HTML→Markdown)
 
-## 라이선스 | License
+## License
 
 MIT
 
-## 작성자 | Author
+## Author
 
-**유호현 (Hohyon Ryu)**
-- GitHub: [@hohyon-ryu](https://github.com/hohyon-ryu)
+**유호현 (Hohyon Ryu)** — [@hohyon-ryu](https://github.com/hohyon-ryu)
