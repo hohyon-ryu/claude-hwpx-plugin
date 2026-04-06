@@ -92,7 +92,7 @@ def latex_to_hwp(latex: str) -> str:
         m = re.search(r'\\sqrt\s*\{', s)
         if m:
             content = _match_brace(s, m.end()-1)
-            end_pos = m.end() + len(content)
+            end_pos = m.end() + len(content) + 1
             s = s[:m.start()] + 'sqrt {' + content + '}' + s[end_pos:]
             continue
 
@@ -100,7 +100,7 @@ def latex_to_hwp(latex: str) -> str:
         m = re.search(r'\\text\s*\{', s)
         if m:
             content = _match_brace(s, m.end()-1)
-            end_pos = m.end() + len(content)
+            end_pos = m.end() + len(content) + 1
             s = s[:m.start()] + '"' + content + '"' + s[end_pos:]
             continue
 
@@ -108,7 +108,7 @@ def latex_to_hwp(latex: str) -> str:
         m = re.search(r'\\mathrm\s*\{', s)
         if m:
             content = _match_brace(s, m.end()-1)
-            end_pos = m.end() + len(content)
+            end_pos = m.end() + len(content) + 1
             s = s[:m.start()] + '"' + content + '"' + s[end_pos:]
             continue
 
@@ -182,6 +182,10 @@ def latex_to_hwp(latex: str) -> str:
     # 과도한 공백 정리
     s = re.sub(r'\s+', ' ', s).strip()
 
+    # ^/_ 뒤 공백 제거 (위첨자/아래첨자 인수는 바로 붙어야 함)
+    s = re.sub(r'\^\s+', '^', s)
+    s = re.sub(r'_\s+', '_', s)
+
     # === 5단계: 공백 → ~ (HWP 수식에서 일반 공백은 무시됨) ===
     structural_kw = re.compile(
         r'\b(over|sqrt|left|right|LEFT|RIGHT|lbrace|rbrace|rm|it|bar|vec|cases)\b'
@@ -206,16 +210,17 @@ def build_equation(script: str, width: int = 14000) -> str:
     eid = _next_eq_id()
     return (f'<hp:equation id="{eid}" zOrder="0" numberingType="EQUATION" '
             f'textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" '
-            f'dropcapstyle="None" version="" baseLine="86" textColor="#000000" '
+            f'dropcapstyle="None" version="Equation Version 60" baseLine="61" textColor="#000000" '
             f'baseUnit="1100" lineMode="CHAR" font="HYhwpEQ">'
             f'<hp:sz width="{width}" widthRelTo="ABSOLUTE" '
             f'height="3000" heightRelTo="ABSOLUTE" protect="0"/>'
             f'<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" '
             f'allowOverlap="0" holdAnchorAndSO="0" '
-            f'vertRelTo="PAPER" horzRelTo="COLUMN" '
-            f'vertAlign="BOTTOM" horzAlign="LEFT" '
-            f'vertOffset="850" horzOffset="0"/>'
-            f'<hp:outMargin left="56" right="56" top="56" bottom="56"/>'
+            f'vertRelTo="PARA" horzRelTo="PARA" '
+            f'vertAlign="TOP" horzAlign="LEFT" '
+            f'vertOffset="0" horzOffset="0"/>'
+            f'<hp:outMargin left="56" right="56" top="0" bottom="0"/>'
+            f'<hp:shapeComment>수식입니다.</hp:shapeComment>'
             f'<hp:script>{html_mod.escape(script)}</hp:script>'
             f'</hp:equation>')
 

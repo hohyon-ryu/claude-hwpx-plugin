@@ -299,16 +299,17 @@ ha = http://www.hancom.co.kr/hwpml/2011/app          (application)
   <hp:run charPrIDRef="1">
     <hp:equation id="0" zOrder="0" numberingType="EQUATION"
         textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0"
-        dropcapstyle="None" version="" baseLine="86" textColor="#000000"
-        baseUnit="1100" lineMode="CHAR" font="HYhwpEQ">
+        dropcapstyle="None" version="Equation Version 60" baseLine="61"
+        textColor="#000000" baseUnit="1100" lineMode="CHAR" font="HYhwpEQ">
         <hp:sz width="14000" widthRelTo="ABSOLUTE"
                height="3000" heightRelTo="ABSOLUTE" protect="0"/>
         <hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1"
                 allowOverlap="0" holdAnchorAndSO="0"
-                vertRelTo="PAPER" horzRelTo="COLUMN"
-                vertAlign="BOTTOM" horzAlign="LEFT"
-                vertOffset="850" horzOffset="0"/>
-        <hp:outMargin left="56" right="56" top="56" bottom="56"/>
+                vertRelTo="PARA" horzRelTo="PARA"
+                vertAlign="TOP" horzAlign="LEFT"
+                vertOffset="0" horzOffset="0"/>
+        <hp:outMargin left="56" right="56" top="0" bottom="0"/>
+        <hp:shapeComment>수식입니다.</hp:shapeComment>
         <hp:script>x^rm{2}+rm{3}x+rm{2}=rm{0}</hp:script>
     </hp:equation>
     <hp:t/>
@@ -320,9 +321,14 @@ ha = http://www.hancom.co.kr/hwpml/2011/app          (application)
 ```
 
 **Key equation attributes:**
+- `version="Equation Version 60"`: **CRITICAL** — 수식 렌더러 버전. 빈 문자열이면 복잡한 수식이 표시되지 않음
+- `baseLine="61"`: Baseline offset (한글 프로그램 기본값)
+- `vertRelTo="PARA"`, `horzRelTo="PARA"`: **CRITICAL** — 문단 기준 위치. `PAPER`/`COLUMN` 사용 시 수식 렌더링 실패
+- `vertAlign="TOP"`, `vertOffset="0"`: 문단 상단 정렬, 오프셋 0
+- `outMargin top="0" bottom="0"`: 상하 여백 0 (한글 기본값)
+- `<hp:shapeComment>수식입니다.</hp:shapeComment>`: 한글 프로그램 호환성용 주석
 - `width`: Equation width (HWP units, ~600 per character)
 - `height`: Equation height (default 3000)
-- `baseLine`: Baseline offset (86 = body text alignment)
 - `treatAsChar="1"`: Inline equation
 - `font="HYhwpEQ"`: HWP equation font (required)
 
@@ -510,7 +516,11 @@ Supports inline `$...$` equations auto-converted to HWP equation script.
 
 ## Critical Rules
 
+- **`version="Equation Version 60"`** — 수식 렌더러 버전 필수. 빈 문자열이면 수식이 본문에 표시되지 않음
+- **`vertRelTo="PARA"`, `horzRelTo="PARA"`** — 수식 위치는 문단 기준. `PAPER`/`COLUMN` 사용 시 렌더링 실패
 - **Empty `<hp:t/>` after equations** — Without it, equations won't display
+- **`\sqrt`, `\text`, `\mathrm` 변환 시 end_pos +1** — `_match_brace` 후 닫는 `}`를 건너뛰어야 중괄호 불일치 방지
+- **`^`/`_` 뒤 공백 금지** — `v^ rm{2}`는 파싱 오류. `v^rm{2}` 또는 `v^{rm{2}}`로 붙여 써야 함
 - **UTF-8 encoding** — Use `html.escape()` for XML content
 - **binaryItemIDRef matching** — Image refs must match content.hpf IDs
 - **`<hp:colPr>` inside `<hp:secPr>`** — Multi-column fails otherwise
@@ -523,16 +533,20 @@ Supports inline `$...$` equations auto-converted to HWP equation script.
 
 ## Common Mistakes & Debugging
 
-1. **Equation not displaying**: Missing `<hp:t/>` after `<hp:equation>` element
-2. **Korean text garbled**: XML encoding not UTF-8, or missing `html.escape()`
-3. **Image not showing**: `binaryItemIDRef` doesn't match content.hpf `id`
-4. **2-column layout broken**: `<hp:colPr>` not inside `<hp:secPr>`
-5. **Page break not working**: Use `pageBreak="1"` attribute on `<hp:p>`
-6. **Column break not working**: Use `columnBreak="1"` attribute on `<hp:p>`
-7. **Table borders missing**: `borderFillIDRef` not set to "3" (solid line)
-8. **Equation too wide**: Max ~18000 for 2-column, ~40000 for single column
-9. **rm/it confusion**: Variables are italic, geometry vertices/units/probability are roman
-10. **Bullet instead of cdot**: Use `cdot` for dot product, never `bullet`
+1. **Equation blank in body but visible in editor**: `version=""` (빈 문자열) → `version="Equation Version 60"` 필수
+2. **Equation blank in body (position)**: `vertRelTo="PAPER"` → `vertRelTo="PARA"`, `horzRelTo="COLUMN"` → `horzRelTo="PARA"` 변경
+3. **Equation not displaying**: Missing `<hp:t/>` after `<hp:equation>` element
+4. **Superscript/subscript broken**: `^` 또는 `_` 뒤에 공백이 있으면 안 됨. `v^rm{2}` (O), `v^ rm{2}` (X)
+5. **Brace mismatch in equation script**: `\sqrt`, `\text` 변환 시 `end_pos = m.end() + len(content) + 1` (닫는 `}` 건너뛰기)
+6. **Korean text garbled**: XML encoding not UTF-8, or missing `html.escape()`
+7. **Image not showing**: `binaryItemIDRef` doesn't match content.hpf `id`
+8. **2-column layout broken**: `<hp:colPr>` not inside `<hp:secPr>`
+9. **Page break not working**: Use `pageBreak="1"` attribute on `<hp:p>`
+10. **Column break not working**: Use `columnBreak="1"` attribute on `<hp:p>`
+11. **Table borders missing**: `borderFillIDRef` not set to "3" (solid line)
+12. **Equation too wide**: Max ~18000 for 2-column, ~40000 for single column
+13. **rm/it confusion**: Variables are italic, geometry vertices/units/probability are roman
+14. **Bullet instead of cdot**: Use `cdot` for dot product, never `bullet`
 
 ## Dependencies
 
